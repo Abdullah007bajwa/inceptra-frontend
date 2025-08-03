@@ -227,16 +227,16 @@ Generated on: ${new Date().toLocaleDateString()}
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                <div className={`h-16 w-16 rounded-full ${getScoreBg(analysisResult.score)} flex items-center justify-center`}>
-                  <span className={`text-2xl font-bold ${getScoreColor(analysisResult.score)}`}>
-                    {analysisResult.score}
+                <div className={`h-16 w-16 rounded-full ${getScoreBg(analysisResult?.score || 0)} flex items-center justify-center`}>
+                  <span className={`text-2xl font-bold ${getScoreColor(analysisResult?.score || 0)}`}>
+                    {analysisResult?.score || 0}
                   </span>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">Overall Score</h3>
                   <p className="text-muted-foreground">
-                    {analysisResult.score >= 80 ? 'Excellent resume!' : 
-                     analysisResult.score >= 60 ? 'Good resume with room for improvement' : 
+                    {analysisResult?.score && analysisResult.score >= 80 ? 'Excellent resume!' : 
+                     analysisResult?.score && analysisResult.score >= 60 ? 'Good resume with room for improvement' : 
                      'Resume needs significant improvements'}
                   </p>
                 </div>
@@ -255,7 +255,7 @@ Generated on: ${new Date().toLocaleDateString()}
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {analysisResult.strengths.map((strength, index) => (
+                  {analysisResult?.strengths?.map((strength, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">{strength}</span>
@@ -275,7 +275,7 @@ Generated on: ${new Date().toLocaleDateString()}
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {analysisResult.improvements.map((improvement, index) => (
+                  {analysisResult?.improvements?.map((improvement, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">{improvement}</span>
@@ -296,7 +296,7 @@ Generated on: ${new Date().toLocaleDateString()}
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {analysisResult.keywords.map((keyword, index) => (
+                {analysisResult?.keywords?.map((keyword, index) => (
                   <Badge key={index} variant="secondary">{keyword}</Badge>
                 ))}
               </div>
@@ -313,7 +313,7 @@ Generated on: ${new Date().toLocaleDateString()}
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {analysisResult.recommendations.map((recommendation, index) => (
+                {analysisResult?.recommendations?.map((recommendation, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-xs font-bold text-primary">{index + 1}</span>

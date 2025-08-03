@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { UsageDisplay } from '@/components/UsageDisplay';
 
 export default function Dashboard() {
   const tools = [
@@ -67,6 +68,15 @@ export default function Dashboard() {
         <p className="text-muted-foreground">
           Choose from our powerful AI tools to bring your ideas to life.
         </p>
+      </motion.div>
+
+      {/* Usage Display */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.05 }}
+      >
+        <UsageDisplay />
       </motion.div>
 
       {/* Stats Overview */}

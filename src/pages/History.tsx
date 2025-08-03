@@ -1,225 +1,285 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@clerk/clerk-react';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import {
+  Card, CardHeader, CardContent, CardTitle, CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/ui/loading';
-import { 
-  History as HistoryIcon, 
-  FileText, 
-  Image, 
-  Scissors, 
-  FileUser,
-  Calendar,
-  Download,
-  Eye
+import { toast } from 'sonner';
+import {
+  Calendar, Download, Eye, XCircle, FileText, Image as ImageIcon,
+  Scissors, FileUser, History as HistoryIcon, Copy, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import { apiService } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
+import api, { setAuthToken } from '@/lib/api';
 
-interface HistoryItem {
+type HistoryItem = {
   id: string;
-  type: 'article' | 'image' | 'background-removal' | 'resume-analysis';
-  title: string;
-  description?: string;
+  feature: 'article' | 'image' | 'background-removal' | 'resume-analysis';
+  input?: any;
+  output?: any;
   createdAt: string;
-  status: 'completed' | 'processing' | 'failed';
-  metadata?: any;
-}
+};
+
+type PaginationInfo = {
+  currentPage: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  nextCursor: string | null;
+  limit: number;
+};
+
+type HistoryResponse = {
+  history: HistoryItem[];
+  pagination: PaginationInfo;
+};
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case 'article': return FileText;
+    case 'image': return ImageIcon;
+    case 'background-removal': return Scissors;
+    case 'resume-analysis': return FileUser;
+    default: return HistoryIcon;
+  }
+};
+
+const getTypeLabel = (type: string) => {
+  switch (type) {
+    case 'article': return 'Article Generation';
+    case 'image': return 'Image Generation';
+    case 'background-removal': return 'Background Removal';
+    case 'resume-analysis': return 'Resume Analysis';
+    default: return 'Unknown';
+  }
+};
+
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'article': return 'text-blue-500 bg-blue-500/10';
+    case 'image': return 'text-purple-500 bg-purple-500/10';
+    case 'background-removal': return 'text-green-500 bg-green-500/10';
+    case 'resume-analysis': return 'text-orange-500 bg-orange-500/10';
+    default: return 'text-gray-500 bg-gray-500/10';
+  }
+};
 
 export default function History() {
-  const { data: historyItems, isLoading, error } = useQuery({
-    queryKey: ['history'],
-    queryFn: () => apiService.getHistory(50),
+  const { getToken } = useAuth();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['history', currentCursor, currentPage],
+    queryFn: async () => {
+      const token = await getToken({ template: 'backend' });
+      if (!token) throw new Error('Unauthorized');
+      setAuthToken(token);
+      
+      const params = new URLSearchParams({
+        limit: '20',
+        page: currentPage.toString(),
+      });
+      
+      if (currentCursor) {
+        params.append('cursor', currentCursor);
+      }
+      
+      const res = await api.get(`/history?${params.toString()}`);
+      return res.data as HistoryResponse;
+    },
   });
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'article':
-        return FileText;
-      case 'image':
-        return Image;
-      case 'background-removal':
-        return Scissors;
-      case 'resume-analysis':
-        return FileUser;
-      default:
-        return HistoryIcon;
+  const history: HistoryItem[] = data?.history || [];
+  const pagination = data?.pagination;
+
+  const handleNextPage = () => {
+    if (pagination?.hasNextPage && pagination?.nextCursor) {
+      setCurrentCursor(pagination.nextCursor);
+      setCurrentPage(currentPage + 1);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'article':
-        return 'text-blue-500 bg-blue-500/10';
-      case 'image':
-        return 'text-purple-500 bg-purple-500/10';
-      case 'background-removal':
-        return 'text-green-500 bg-green-500/10';
-      case 'resume-analysis':
-        return 'text-orange-500 bg-orange-500/10';
-      default:
-        return 'text-gray-500 bg-gray-500/10';
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500/10 text-green-500">Completed</Badge>;
-      case 'processing':
-        return <Badge className="bg-yellow-500/10 text-yellow-500">Processing</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-500/10 text-red-500">Failed</Badge>;
-      default:
-        return <Badge variant="secondary">Unknown</Badge>;
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'article':
-        return 'Article Generation';
-      case 'image':
-        return 'Image Generation';
-      case 'background-removal':
-        return 'Background Removal';
-      case 'resume-analysis':
-        return 'Resume Analysis';
-      default:
-        return 'Unknown';
+  const handlePreviousPage = () => {
+    if (pagination?.hasPreviousPage) {
+      setCurrentCursor(null);
+      setCurrentPage(currentPage - 1);
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">History</h1>
-          <p className="text-muted-foreground">
-            View your past AI generations and analyses.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <Loading size="lg" text="Loading your history..." />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <div className="flex justify-center py-20"><Loading size="lg" text="Loading your history..." /></div>;
   }
 
   if (error) {
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">History</h1>
-          <p className="text-muted-foreground">
-            View your past AI generations and analyses.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="p-12">
-            <div className="text-center">
-              <HistoryIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Failed to load history</h3>
-              <p className="text-muted-foreground">
-                There was an error loading your history. Please try again later.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-4">❌ Error loading history</p>
+        <Button onClick={() => refetch()}>Try Again</Button>
       </div>
     );
   }
 
-  const items: HistoryItem[] = historyItems || [];
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">History</h1>
+        <h1 className="text-3xl font-bold">History</h1>
         <p className="text-muted-foreground">
-          View your past AI generations and analyses.
+          View all your previous AI generations
+          {pagination && (
+            <span className="ml-2 text-sm">
+              ({pagination.totalCount} total items)
+            </span>
+          )}
         </p>
       </div>
 
-      {items.length === 0 ? (
+      {history.length === 0 ? (
         <Card>
-          <CardContent className="p-12">
-            <div className="text-center">
-              <HistoryIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No history yet</h3>
-              <p className="text-muted-foreground">
-                Start using our AI tools to see your activity here.
-              </p>
-            </div>
+          <CardContent className="p-12 text-center">
+            <HistoryIcon className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No history found</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {items.map((item) => {
-            const TypeIcon = getTypeIcon(item.type);
-            const typeColor = getTypeColor(item.type);
-            
+        <>
+          {history.map((item) => {
+            const Icon = getTypeIcon(item.feature);
+            const color = getTypeColor(item.feature);
+            const isExpanded = expanded === item.id;
+
             return (
-              <Card key={item.id} className="hover:shadow-smooth transition-shadow duration-300">
+              <Card key={item.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className={`h-10 w-10 rounded-lg ${typeColor} flex items-center justify-center`}>
-                        <TypeIcon className="h-5 w-5" />
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-4">
+                      <div className={`h-10 w-10 rounded-lg ${color} flex items-center justify-center`}>
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-lg">{item.title}</CardTitle>
-                          {getStatusBadge(item.status)}
-                        </div>
-                        <CardDescription className="mb-2">
-                          {getTypeLabel(item.type)}
-                          {item.description && ` • ${item.description}`}
-                        </CardDescription>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
+                      <div>
+                        <CardTitle className="text-lg">{getTypeLabel(item.feature)}</CardTitle>
+                        <CardDescription className="text-sm">
+                          <Calendar className="inline h-4 w-4 mr-1" />
                           {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                        </div>
+                        </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Eye className="h-3 w-3" />
-                        View
-                      </Button>
-                      {item.status === 'completed' && (
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Download className="h-3 w-3" />
-                          Download
-                        </Button>
-                      )}
-                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setExpanded(isExpanded ? null : item.id)}>
+                      {isExpanded ? <XCircle className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {isExpanded ? 'Hide' : 'View'}
+                    </Button>
                   </div>
                 </CardHeader>
-                {item.metadata && (
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      {/* Display relevant metadata based on type */}
-                      {item.type === 'article' && item.metadata.length && (
-                        <span>Length: ~{item.metadata.length} words</span>
-                      )}
-                      {item.type === 'image' && item.metadata.size && (
-                        <span>Size: {item.metadata.size}</span>
-                      )}
-                      {item.type === 'resume-analysis' && item.metadata.score && (
-                        <span>Score: {item.metadata.score}/100</span>
-                      )}
-                    </div>
+
+                {isExpanded && (
+                  <CardContent className="space-y-6">
+                    {/* Input */}
+                    {item.input && (
+                      <div>
+                        <p className="font-semibold mb-1">🔤 Input</p>
+                        <pre className="bg-muted p-2 rounded text-sm whitespace-pre-wrap max-h-[300px] overflow-auto">
+                          {JSON.stringify(item.input, null, 2)}
+                        </pre>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify(item.input, null, 2));
+                            toast.success('Input copied!');
+                          }}
+                        >
+                          <Copy className="w-4 h-4" /> Copy Input
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Output */}
+                    {item.output && (
+                      <div>
+                        <p className="font-semibold mb-1">📤 Output</p>
+                        {item.feature === 'image' || item.feature === 'background-removal' ? (
+                          <div className="space-y-2">
+                            <img
+                              src={`data:image/png;base64,${item.output.image}`}
+                              alt="Generated"
+                              className="max-w-full h-auto rounded border"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = `data:image/png;base64,${item.output.image}`;
+                                link.download = `generated-${Date.now()}.png`;
+                                link.click();
+                                toast.success('Image downloaded!');
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download Image
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="bg-muted p-3 rounded text-sm max-h-[300px] overflow-auto">
+                              <ReactMarkdown>{item.output.article || item.output.analysis || JSON.stringify(item.output)}</ReactMarkdown>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const content = item.output.article || item.output.analysis || JSON.stringify(item.output);
+                                navigator.clipboard.writeText(content);
+                                toast.success('Output copied!');
+                              }}
+                            >
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copy Output
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 )}
               </Card>
             );
           })}
-        </div>
+
+          {/* Pagination Controls */}
+          {pagination && (pagination.hasNextPage || pagination.hasPreviousPage) && (
+            <div className="flex justify-between items-center py-4">
+              <div className="text-sm text-muted-foreground">
+                Page {pagination.currentPage} of {Math.ceil(pagination.totalCount / pagination.limit)}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={!pagination.hasPreviousPage}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={!pagination.hasNextPage}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

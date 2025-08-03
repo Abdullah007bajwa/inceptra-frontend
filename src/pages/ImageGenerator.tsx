@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,16 +15,176 @@ export default function ImageGenerator() {
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('realistic');
   const [size, setSize] = useState('1024x1024');
-  const [generatedImage, setGeneratedImage] = useState('');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>('');
+
+  // Cleanup function for object URLs
+  const cleanupImageUrl = useCallback(() => {
+    if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(generatedImageUrl);
+    }
+    // Data URLs don't need cleanup as they're just strings
+  }, [generatedImageUrl]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupImageUrl();
+    };
+  }, [cleanupImageUrl]);
+
+  // Helper function to safely convert base64 to blob
+  const base64ToBlob = useCallback((base64String: string): Blob | null => {
+    try {
+      // Remove data URL prefix if present
+      let cleanBase64 = base64String;
+      if (base64String.includes(',')) {
+        cleanBase64 = base64String.split(',')[1];
+      }
+
+      // Validate base64 string
+      if (!cleanBase64 || cleanBase64.length === 0) {
+        console.error('Empty base64 string');
+        return null;
+      }
+
+      // Try to fix common base64 issues
+      // Remove any whitespace or newlines
+      cleanBase64 = cleanBase64.replace(/\s/g, '');
+      
+      // Ensure proper padding
+      while (cleanBase64.length % 4 !== 0) {
+        cleanBase64 += '=';
+      }
+
+      // More permissive base64 validation - allow padding characters
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleanBase64)) {
+        console.error('Invalid base64 string format after cleaning');
+        console.error('Base64 string preview:', cleanBase64.substring(0, 100));
+        return null;
+      }
+
+      // Decode base64 to binary
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      
+      // Create blob with appropriate MIME type
+      return new Blob([byteArray], { type: 'image/png' });
+    } catch (error) {
+      console.error('Error converting base64 to blob:', error);
+      console.error('Base64 string that caused error:', base64String.substring(0, 200));
+      
+      // Try alternative approach - create blob directly from base64
+      try {
+        const byteCharacters = atob(base64String);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: 'image/png' });
+      } catch (fallbackError) {
+        console.error('Fallback approach also failed:', fallbackError);
+        return null;
+      }
+    }
+  }, []);
+
+  // Helper function to extract image data from various response formats
+  const extractImageData = useCallback((data: any): string | null => {
+    console.log('🧪 Extracting image data from:', data);
+    
+    // Try different possible response formats
+    if (typeof data === 'string') {
+      return data;
+    }
+    
+    if (data && typeof data.image === 'string') {
+      return data.image;
+    }
+    
+    if (data && data.image && typeof data.image.data === 'string') {
+      return data.image.data;
+    }
+    
+    if (data && typeof data.imageUrl === 'string') {
+      return data.imageUrl;
+    }
+    
+    if (data && data.data && typeof data.data === 'string') {
+      return data.data;
+    }
+    
+    // If data is an object, try to find any string property that might be base64
+    if (data && typeof data === 'object') {
+      for (const [key, value] of Object.entries(data)) {
+        if (typeof value === 'string' && value.length > 100) {
+          console.log(`🧪 Found potential image data in property: ${key}`);
+          return value;
+        }
+      }
+    }
+    
+    console.error('🧪 Could not extract image data from response:', data);
+    return null;
+  }, []);
 
   const generateMutation = useMutation({
     mutationFn: apiService.generateImage,
     onSuccess: (data) => {
-      setGeneratedImage(data.imageUrl || data.image || '');
-      toast.success('Image generated successfully!');
+      console.log("🧪 Image response from server:", data);
+      console.log("🧪 Response type:", typeof data);
+      console.log("🧪 Response keys:", Object.keys(data));
+      
+      // Clean up previous image URL
+      cleanupImageUrl();
+      
+      // Extract image data using the helper function
+      const imageBase64 = extractImageData(data);
+            
+      if (!imageBase64) {
+        console.error('No valid image data found in response:', data);
+        toast.error("Invalid image format received from backend");
+        return;
+      }
+
+      // Log first and last few characters of base64 for debugging
+      console.log("🧪 Base64 preview:", {
+        start: imageBase64.substring(0, 50),
+        end: imageBase64.substring(imageBase64.length - 50),
+        length: imageBase64.length
+      });
+
+      // Try creating object URL first
+      const blob = base64ToBlob(imageBase64);
+      if (blob) {
+        try {
+          const objectUrl = URL.createObjectURL(blob);
+          setGeneratedImageUrl(objectUrl);
+          toast.success('Image generated successfully!');
+          return;
+        } catch (error) {
+          console.error('Error creating object URL:', error);
+        }
+      }
+
+      // Fallback: try using data URL directly
+      try {
+        const dataUrl = `data:image/png;base64,${imageBase64}`;
+        setGeneratedImageUrl(dataUrl);
+        toast.success('Image generated successfully!');
+      } catch (error) {
+        console.error('Error creating data URL:', error);
+        toast.error("Error displaying image");
+      }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to generate image');
+      console.error('Image generation error:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.error || 'Failed to generate image');
     },
   });
 
@@ -42,15 +202,17 @@ export default function ImageGenerator() {
     });
   };
 
-  const downloadImage = () => {
+  const downloadImage = useCallback(() => {
+    if (!generatedImageUrl) return;
+    
     const link = document.createElement('a');
-    link.href = generatedImage;
+    link.href = generatedImageUrl;
     link.download = `generated-image-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     toast.success('Image downloaded!');
-  };
+  }, [generatedImageUrl]);
 
   return (
     <div className="space-y-8">
@@ -89,93 +251,91 @@ export default function ImageGenerator() {
 
               <div className="space-y-2">
                 <Label htmlFor="style">Style</Label>
-                <Select value={style} onValueChange={setStyle} disabled={generateMutation.isPending}>
+                <Select value={style} onValueChange={setStyle}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select a style" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="realistic">Realistic</SelectItem>
                     <SelectItem value="artistic">Artistic</SelectItem>
                     <SelectItem value="cartoon">Cartoon</SelectItem>
                     <SelectItem value="abstract">Abstract</SelectItem>
-                    <SelectItem value="anime">Anime</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="size">Image Size</Label>
-                <Select value={size} onValueChange={setSize} disabled={generateMutation.isPending}>
+                <Label htmlFor="size">Size</Label>
+                <Select value={size} onValueChange={setSize}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select size" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="512x512">Square (512x512)</SelectItem>
-                    <SelectItem value="1024x1024">Large Square (1024x1024)</SelectItem>
-                    <SelectItem value="1024x768">Landscape (1024x768)</SelectItem>
-                    <SelectItem value="768x1024">Portrait (768x1024)</SelectItem>
+                    <SelectItem value="512x512">512x512</SelectItem>
+                    <SelectItem value="1024x1024">1024x1024</SelectItem>
+                    <SelectItem value="1024x768">1024x768</SelectItem>
+                    <SelectItem value="768x1024">768x1024</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full"
                 disabled={generateMutation.isPending || !prompt.trim()}
+                className="w-full"
               >
                 {generateMutation.isPending ? (
-                  <Loading size="sm" text="Generating..." />
+                  <>
+                    <Loading className="mr-2 h-4 w-4" />
+                    Generating...
+                  </>
                 ) : (
-                  'Generate Image'
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Image
+                  </>
                 )}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Generated Image */}
+        {/* Output */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Generated Image</CardTitle>
-                <CardDescription>
-                  Your AI-generated image will appear here
-                </CardDescription>
-              </div>
-              {generatedImage && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={downloadImage}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-              )}
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="h-5 w-5" />
+              Generated Image
+            </CardTitle>
+            <CardDescription>
+              Your AI-generated image will appear here
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {generateMutation.isPending ? (
-              <div className="flex items-center justify-center py-24">
-                <Loading size="lg" text="Creating your image..." />
-              </div>
-            ) : generatedImage ? (
-              <div className="space-y-4">
-                <img
-                  src={generatedImage}
-                  alt="Generated image"
-                  className="w-full rounded-lg shadow-smooth"
-                />
-                <div className="text-sm text-muted-foreground">
-                  <strong>Prompt:</strong> {prompt}
+              <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
+                <div className="text-center">
+                  <Loading size="lg" text="Generating your image..." />
                 </div>
               </div>
+            ) : generatedImageUrl ? (
+              <div className="space-y-4">
+                <img
+                  src={generatedImageUrl}
+                  alt="Generated"
+                  className="w-full h-auto rounded-lg border"
+                />
+                <Button onClick={downloadImage} className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Image
+                </Button>
+              </div>
             ) : (
-              <div className="text-center py-24 text-muted-foreground">
-                <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Generate an image to see the results here</p>
+              <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
+                <div className="text-center text-muted-foreground">
+                  <Image className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No image generated yet</p>
+                </div>
               </div>
             )}
           </CardContent>

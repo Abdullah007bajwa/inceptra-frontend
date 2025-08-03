@@ -1,166 +1,180 @@
-# Inceptra - AI-Powered Creation Platform
+# ✨ Inceptra – AI Creation Platform
 
-A comprehensive React + Vite + TypeScript frontend that integrates seamlessly with an Express server backend. Features multiple AI-powered tools for content creation, image generation, background removal, and resume analysis.
+A modern frontend built with **React**, **Vite**, and **TypeScript**, seamlessly integrated with an Express backend. It features a suite of intelligent tools for content creation, image generation, background removal, and resume analysis.
+
+---
 
 ## 🚀 Features
 
-- **AI Article Generator**: Create compelling articles from titles with configurable length
-- **AI Image Generator**: Generate stunning visuals from text prompts with style options  
-- **Background Remover**: Remove backgrounds from images instantly using AI
-- **Resume Analyzer**: Get AI-powered insights and recommendations for resumes
-- **User Authentication**: Secure authentication powered by Clerk
-- **Modern UI**: Beautiful, responsive design with dark/light mode support
-- **Real-time Processing**: Live feedback and progress indicators
-- **History Tracking**: View and manage your past generations
+- **Article Generator** – Auto-generate structured articles based on titles
+- **Image Generator** – Create visuals from text prompts with style and resolution options
+- **Background Remover** – Quickly remove backgrounds from uploaded images
+- **Resume Analyzer** – Extract insights and suggestions from resume PDFs
+- **User Authentication** – Secure login powered by Clerk
+- **Responsive UI** – Includes light/dark mode and adaptive layouts
+- **Live Feedback** – Real-time progress indicators
+- **Generation History** – Access and manage previously created assets
 
-## 🛠️ Tech Stack
+---
 
-- **Frontend**: React 18, Vite, TypeScript
+## 🔧 Tech Stack
+
+- **Frameworks**: React 18, Vite, TypeScript
 - **Styling**: Tailwind CSS with custom design system
 - **Authentication**: Clerk
-- **API**: Axios with automatic token management
-- **State Management**: React Query (TanStack Query)
+- **Data Handling**: Axios, TanStack React Query
 - **Routing**: React Router v6
-- **UI Components**: shadcn/ui with custom enhancements
+- **UI**: shadcn/ui with tailored components
 - **Animations**: Framer Motion
+
+---
 
 ## 📋 Prerequisites
 
-- Node.js 18+ and npm
-- A running Express server at http://localhost:5000
-- Clerk account and API keys
+- Node.js 18+
+- Express backend running on `http://localhost:5000`
+- Clerk account and API credentials
 
-## 🚀 Getting Started
+---
+
+## 🛠️ Getting Started
 
 ### 1. Clone and Install
 
 ```bash
 git clone <repository-url>
 cd inceptra-frontend
-npm install
+pnpm install
 ```
 
-### 2. Environment Setup
+### 2. Setup Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Update the `.env` file with your actual values:
+Configure the `.env` file:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 VITE_CLIENT_URL=http://localhost:5173
 ```
 
-### 3. Start Development Server
+### 3. Start the App
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
-The application will be available at http://localhost:5173
+Runs at: `http://localhost:5173`
 
-## 🔧 Available Scripts
+---
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production  
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+## 📦 Scripts
 
-## 🏗️ Project Structure
+- `pnpm run dev` — Start development server
+- `pnpm run build` — Create production build
+- `pnpm run preview` — Preview production output
+- `pnpm run lint` — Run ESLint checks
 
-```
+---
+
+## 🧱 Project Structure
+
+```text
 src/
-├── components/          # Reusable UI components
-│   ├── ui/             # shadcn/ui components
-│   └── layout/         # Layout components (Sidebar, Header)
-├── pages/              # Route components
-├── lib/                # Utilities and API configuration
-├── hooks/              # Custom React hooks
-└── main.tsx           # Application entry point
+├── components/      # Reusable UI elements
+│   ├── ui/          # Base components (shadcn/ui)
+│   └── layout/      # Layouts like Sidebar and Header
+├── pages/           # Route views
+├── lib/             # API config and utilities
+├── hooks/           # Custom hooks
+└── main.tsx         # Entry point
 ```
+
+---
 
 ## 🔐 Authentication
 
-The app uses Clerk for authentication with the following features:
+Features:
+- Auto-attached bearer tokens on API requests
+- Protected routing and session handling
+- Intelligent redirect for unauthorized access
 
-- **Token Management**: Automatic Bearer token attachment to API requests
-- **Protected Routes**: Dashboard routes require authentication
-- **Session Handling**: Automatic cookie and token management
-- **401 Prevention**: Intelligent error handling and redirects
+---
 
 ## 🎨 Design System
 
-The application features a comprehensive design system with:
+Includes:
+- Semantic color tokens
+- Gradients and glow/shadow utilities
+- Smooth animations and transitions
+- Mobile-first responsive layout
 
-- **Semantic Color Tokens**: Primary, secondary, accent colors with hover states
-- **Gradient Support**: Beautiful gradient backgrounds and effects
-- **Shadow System**: Consistent shadow utilities including glow effects
-- **Animation Utilities**: Smooth transitions and micro-interactions
-- **Responsive Design**: Mobile-first approach with tablet/desktop breakpoints
+---
 
-## 📡 API Integration
+## 📡 API Endpoints
 
-The frontend expects the following backend endpoints:
+All requests use `Authorization: Bearer <token>` and `withCredentials: true`
 
-### Authentication
-- All requests include `withCredentials: true` and `Authorization: Bearer <token>`
+### Article Generator
+```http
+POST /api/article
+{
+  "title": "Your article title",
+  "length": 600
+}
+```
 
-### Article Generation
-- `POST /api/article` - Generate articles
-  ```json
-  {
-    "title": "Article title",
-    "length": 600
-  }
-  ```
+### Image Generator
+```http
+POST /api/image
+{
+  "prompt": "Image description",
+  "style": "realistic",
+  "size": "1024x1024"
+}
+```
 
-### Image Generation  
-- `POST /api/image` - Generate images
-  ```json
-  {
-    "prompt": "Image description",
-    "style": "realistic",
-    "size": "1024x1024"
-  }
-  ```
+### Background Remover
+```http
+POST /api/bg-remove
+FormData: image file
+```
 
-### Background Removal
-- `POST /api/bg-remove` - Remove image backgrounds
-  - Form data with `image` file
-
-### Resume Analysis
-- `POST /api/resume` - Analyze resumes
-  - Form data with `resume` PDF file
+### Resume Analyzer
+```http
+POST /api/resume
+FormData: PDF resume
+```
 
 ### History
-- `GET /api/history?limit=50` - Get user history
+```http
+GET /api/history?limit=50
+```
+
+---
 
 ## 🌐 Deployment
 
-### Build for Production
-
 ```bash
-npm run build
+pnpm run build
 ```
 
-### Environment Variables for Production
+Set these production environment variables:
 
-Ensure all environment variables are properly set:
+- `VITE_API_BASE_URL`
+- `VITE_CLERK_PUBLISHABLE_KEY`
+- `VITE_CLIENT_URL`
 
-- `VITE_API_BASE_URL`: Your production API URL
-- `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk publishable key
-- `VITE_CLIENT_URL`: Your production frontend URL
+---
 
-## 🔧 Configuration
+## ⚙️ Dev Configuration
 
 ### Vite Proxy
 
-The development server includes a proxy configuration for API requests:
-
-```typescript
+```ts
 server: {
   proxy: {
     '/api': {
@@ -171,26 +185,30 @@ server: {
 }
 ```
 
-### Tailwind Configuration
+### Tailwind Setup
 
-Custom design tokens are configured in `tailwind.config.ts` and `src/index.css` for consistent theming.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -am 'Add new feature'`
-4. Push to branch: `git push origin feature/new-feature`
-5. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For support, please open an issue in the repository or contact the development team.
+Custom tokens and themes defined in:
+- `tailwind.config.ts`
+- `src/index.css`
 
 ---
 
-Built with ❤️ using modern web technologies
+## 🤝 Contributing
+
+1. Fork the repo
+2. `git checkout -b feature/your-feature`
+3. `git commit -am 'Add feature'`
+4. `git push origin feature/your-feature`
+5. Open a pull request
+
+---
+
+## 📝 License
+
+Licensed under the MIT License.
+
+---
+
+## 📬 Support
+
+Open an issue or contact the dev team via abdullah.bajwa.co@gmail.com.

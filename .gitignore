@@ -1,24 +1,93 @@
-# Logs
-logs
+# 🔄 Inceptra Frontend - .gitignore
+
+# ===== DEPENDENCIES =====
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# ===== ENVIRONMENT FILES =====
+.env
+.env.*
+!.env.example
+
+# ===== BUILD OUTPUTS =====
+dist/
+dist-ssr/
+build/
+out/
+
+# ===== LOGS =====
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+logs/
 
-node_modules
-dist
-dist-ssr
+# ===== RUNTIME FILES =====
 *.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
 .DS_Store
+Thumbs.db
+
+# ===== IDE & EDITOR FILES =====
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ===== PACKAGE MANAGER FILES =====
+package-lock.json
+yarn.lock
+bun.lockb
+# Keep pnpm-lock.yaml for reproducible builds
+
+# ===== TESTING =====
+coverage/
+.nyc_output/
+.jest/
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# ===== UPLOADED FILES =====
+public/uploads/
+temp/
+
+# ===== SECURITY =====
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ===== OS GENERATED =====
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# ===== VITE SPECIFIC =====
+.vite/
+
+# ===== REACT SPECIFIC =====
+*.tsbuildinfo
+
+# ===== BACKUP FILES =====
+*.bak
+*.backup
+*.old
+
+# ===== COMPRESSED FILES =====
+*.zip
+*.tar.gz
+*.rar
+*.7z

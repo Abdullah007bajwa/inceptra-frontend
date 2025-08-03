@@ -8,12 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0", // Allow external connections
     port: 5173,
-    proxy: {
+    proxy: mode === 'development' ? {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
-    },
+    } : undefined,
   },
   plugins: [
     react(),

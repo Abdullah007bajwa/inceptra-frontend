@@ -78,14 +78,17 @@ export function DashboardSidebar() {
       <SidebarContent>
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
+          <NavLink 
+            to="/" 
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             {!isCollapsed && (
               <span className="text-lg font-bold text-sidebar-foreground">Inceptra</span>
             )}
-          </div>
+          </NavLink>
         </div>
 
         {/* Navigation */}

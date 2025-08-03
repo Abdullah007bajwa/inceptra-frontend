@@ -91,3 +91,4 @@ Thumbs.db
 *.tar.gz
 *.rar
 *.7z
+.vercel

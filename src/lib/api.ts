@@ -20,11 +20,20 @@ export const setAuthToken = (token: string) => {
   }
 };
 
-// RESPONSE INTERCEPTOR: remove auto‐redirect on 401
+// RESPONSE INTERCEPTOR: handle 401 errors and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // simply re‐throw; let components decide what to do on 401
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.warn('⚠️ 401 Unauthorized - Token may be expired');
+      
+      // Clear the current token
+      setAuthToken('');
+      
+      // You could trigger a token refresh here if needed
+      // For now, let the component handle the 401
+    }
+    
     return Promise.reject(error);
   }
 );
